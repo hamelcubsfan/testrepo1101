@@ -32,4 +32,3 @@ if st.button("Generate"):
         st.write(email)
     else:
         st.write("Please provide both the API key and source URL.")
-  
