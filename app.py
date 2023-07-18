@@ -1,3 +1,7 @@
+pip install langchain
+pip install openai
+
+
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.chains.summarize import load_summarize_chain
