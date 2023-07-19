@@ -33,8 +33,16 @@ def main():
     if st.button("Generate Summary"):
         website_data = pull_from_website(url)
         
+        if not website_data:
+            st.error("Failed to fetch data from the website. Please check the URL.")
+            return
+
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
         docs = text_splitter.create_documents([website_data])
+        
+        if not docs:
+            st.error("Failed to split the fetched data into documents.")
+            return
 
         map_prompt = """You are a helpful AI bot that aids a user in research.
         Below is information about a person.
