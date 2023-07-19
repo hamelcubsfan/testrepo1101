@@ -1,37 +1,51 @@
-import streamlit as st
-from langchain.load import load_chain
-from langchain.llms.openai import ChatOpenAI
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 
-# Setup the langchain library
-chain = load_chain("map_reduce_llm")
-llm = ChatOpenAI(temperature=.25, model_name='gpt-3.5-turbo-16k')
+# Function to scrape data from a website
+def pull_from_website(url):
+    try:
+        response = requests.get(url)
+    except:
+        print("Whoops, error")
+        return
 
-# Get the LinkedIn url from the user
-linkedin_url = st.text_input("Enter the LinkedIn URL:")
+    soup = BeautifulSoup(response.text, 'html.parser')
+    text = soup.get_text()
+    text = md(text)
+    return text
+	@@ -40,30 +54,30 @@ def pull_from_website(url):
+map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
+combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "candidate"])
 
-# Get the OpenAI API Key from the user
-OPENAI_API_KEY = st.text_input("Enter the OpenAI API Key:", type="password")
+api_key = YOUR_OPENAI_API_KEY
+source_url = YOUR_SOURCE_URL
+candidate_name = YOUR_CANDIDATE_NAME
 
-if st.button('Generate'):
-    if linkedin_url and OPENAI_API_KEY:
-        llm.api_key = OPENAI_API_KEY
-        
-        # Fetch and parse the LinkedIn page
-        response = requests.get(linkedin_url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        text = soup.get_text()
-        text = md(text)
-        
-        # Split the text into chunks
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
-        docs = text_splitter.create_documents([text])
-        
-        # Use the langchain library to generate the output
-        output = chain({"input_documents": docs})
-        st.write(output)
-    else:
-        st.write("Please enter both the LinkedIn URL and the OpenAI API Key.")
+# Scrape data from the website
+scraped_data = pull_from_website(source_url)
+print("Scraped Data:", scraped_data)
+
+# Initialize the necessary classes
+lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+
+# Prepare the data
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
+documents = text_splitter.create_documents([scraped_data])
+
+# Run the map stage
+summaries = map_llm_chain.run({"input_documents": documents, "candidate": candidate_name})
+
+# Convert summaries to a list of Document objects
+summaries = [Document(page_content=summary) for summary in summaries]
+
+# Run the combine stage
+consolidated_summary = combine_llm_chain.run({"input_documents": summaries, "candidate": candidate_name})
+
+print(consolidated_summary)
