@@ -38,7 +38,7 @@ def pull_from_website(url):
 
 map_prompt = """Below is a section of a website about {candidate}
 
-Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
+Based only on the text provided, write a concise summary about {candidate}. Do not invent or add any additional information.
 
 {text}
 
@@ -48,7 +48,7 @@ combine_prompt = """
 You are a helpful AI bot that aids a user in summarizing information.
 You will be given a list of summaries about {candidate}.
 
-Please consolidate the summaries and return a unified, coherent summary
+Please consolidate the summaries and return a unified, coherent summary, ensuring to only use the information provided and not to fabricate any details.
 
 % SUMMARIES
 {text}
@@ -64,7 +64,7 @@ if st.button("Generate"):
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
-        lang_model = ChatOpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+        lang_model = ChatOpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo', temperature=.25)
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
