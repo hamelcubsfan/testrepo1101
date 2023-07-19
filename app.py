@@ -32,13 +32,33 @@ def pull_from_website(url):
     text = md(text)
     return text
 
-map_prompt = """Below is a section of a website about {candidate}
+map_prompt = """You are a helpful AI bot that aids a user in research.
+Below is information about a person named {candidate}.
+Information will include tweets, interview transcripts, and blog posts about {candidate}
+Your goal is to generate interview questions that we can ask {candidate}
+Use specifics from the research when possible
 
-Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
+% START OF INFORMATION ABOUT {candidate}:
+{text}
+% END OF INFORMATION ABOUT {candidate}:
 
-{about_section}
+Please respond with list of a few interview questions based on the topics above
 
-% CONCISE SUMMARY:"""
+YOUR RESPONSE:"""
+
+map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
+
+combine_prompt = """
+You are a helpful AI bot that aids a user in research.
+You will be given a list of potential interview questions that we can ask {candidate}.
+
+Please consolidate the questions and return a list
+
+% INTERVIEW QUESTIONS
+{text}
+"""
+
+combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "candidate"])
 
 if st.button("Generate"):
     if api_key and source_url and candidate_name:
@@ -47,18 +67,20 @@ if st.button("Generate"):
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key)
-        text_splitter = RecursiveCharacterTextSplitter()
-        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["about_section", "candidate"])
+        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
         # Prepare the data
-        documents = text_splitter.create_documents([scraped_data])
+        documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
         # Initialize and run StuffDocumentsChain
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="about_section")
-        summary = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
+        questions = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+
+        summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+        consolidated_questions = summarize_chain.run({"input_documents": questions, "candidate": candidate_name})
         
-        st.write(summary)
+        st.write(consolidated_questions)
     else:
         st.write("Please provide all necessary information.")
