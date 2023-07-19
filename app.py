@@ -15,13 +15,18 @@ api_key = st.text_input("Enter your OpenAI API Key")
 source_url = st.text_input("Enter the source URL (website or blog post)")
 
 # Function to scrape data from a website
-def pull_from_website(source_url):
+def pull_from_website(url):
     try:
-        response = requests.get(source_url)
+        response = requests.get(url)
     except:
         st.write("Whoops, error")
         return
     soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Remove unnecessary tags
+    for tag in soup.find_all(['nav', 'footer', 'aside', 'header', 'style', 'script']):
+        tag.decompose()
+
     text = soup.get_text()
     text = md(text)
     return text
