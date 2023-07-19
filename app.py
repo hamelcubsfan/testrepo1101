@@ -21,14 +21,14 @@ if st.button("Generate"):
         lang_model = OpenAI(openai_api_key=api_key)
 
         # Initialize the necessary classes
-        url_loader = UnstructuredURLLoader()
+        url_loader = UnstructuredURLLoader(urls=[source_url])
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=4096, chunk_overlap=512, length_function=len)
 
         map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["prospect", "text"])
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
 
         # Load and prepare the data
-        documents = url_loader.load([source_url])
+        documents = url_loader.load()
         documents = text_splitter.create_documents(documents)
 
         # Load the summarize chain
