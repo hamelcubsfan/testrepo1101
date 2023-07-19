@@ -13,6 +13,7 @@ st.title("Personalized Outreach Generator")
 
 api_key = st.text_input("Enter your OpenAI API Key")
 source_url = st.text_input("Enter the source URL (website or blog post)")
+candidate_name = st.text_input("Enter the candidate's name")
 
 # Function to scrape data from a website
 def pull_from_website(url):
@@ -31,23 +32,23 @@ def pull_from_website(url):
     text = md(text)
     return text
 
-map_prompt = """Below is a section of a website about {prospect}
+map_prompt = """Below is a section of a website about {candidate}
 
-Write a concise summary about {prospect}. If the information is not about {prospect}, exclude it from your summary.
+Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
 
 {text}
 
 % CONCISE SUMMARY:"""
 
 if st.button("Generate"):
-    if api_key and source_url:
+    if api_key and source_url and candidate_name:
         # Scrape data from the website
         scraped_data = pull_from_website(source_url)
 
         # Initialize the necessary classes
         lang_model = OpenAI(openai_api_key=api_key)
         text_splitter = RecursiveCharacterTextSplitter()
-        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
+        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
 
         # Prepare the data
@@ -55,8 +56,8 @@ if st.button("Generate"):
 
         # Initialize and run StuffDocumentsChain
         summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-        summary = summarize_chain.run({"input_documents": documents, "prospect": "Prospect Name"})
+        summary = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
         
         st.write(summary)
     else:
-        st.write("Please provide both the API key and source URL.")
+        st.write("Please provide all necessary information.")
