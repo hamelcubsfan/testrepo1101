@@ -3,7 +3,7 @@
 
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
-from langchain.chains import LLMChain, StuffDocumentsChain
+from langchain.chains import StuffDocumentsChain
 from langchain.llms import OpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
@@ -55,12 +55,11 @@ if st.button("Generate"):
     if api_key and source_url:
         # Initialize the necessary classes
         lang_model = OpenAI(openai_api_key=api_key)
-        llm_chain = LLMChain(llm=lang_model)
         url_loader = UnstructuredURLLoader(urls=[source_url])
         text_splitter = RecursiveCharacterTextSplitter()
         map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
-        summarize_chain = StuffDocumentsChain(llm_chain=llm_chain, map_prompt=map_prompt_template, combine_prompt=combine_prompt_template)
+        summarize_chain = StuffDocumentsChain(llm=lang_model, map_prompt=map_prompt_template, combine_prompt=combine_prompt_template)
 
         # Load and prepare the data
         documents = url_loader.load()
