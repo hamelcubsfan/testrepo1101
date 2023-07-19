@@ -19,6 +19,7 @@ candidate_name = st.text_input("Enter the candidate's name")
 def pull_from_website(url):
     try:
         response = requests.get(url)
+        response.raise_for_status()  # Check if the request was successful
     except:
         st.write("Whoops, error")
         return
@@ -29,7 +30,7 @@ def pull_from_website(url):
         tag.decompose()
 
     text = soup.get_text()
-    text = md(text)
+    text = md(text)  # Convert HTML to Markdown for better parsing
     return text
 
 map_prompt = """Below is a section of a website about {candidate}
@@ -38,7 +39,7 @@ Write a concise summary about {candidate}. If the information is not about {cand
 
 {text}
 
-% END OF SUMMARY:"""
+% CONCISE SUMMARY:"""
 
 combine_prompt = """
 You are a helpful AI bot that aids a user in summarizing information.
@@ -46,7 +47,7 @@ You will be given a list of summaries about {candidate}.
 
 Please consolidate the summaries and return a unified, coherent summary
 
-% LIST OF SUMMARIES
+% SUMMARIES
 {text}
 """
 
@@ -67,13 +68,14 @@ if st.button("Generate"):
         # Prepare the data
         documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
-        # Initialize and run StuffDocumentsChain
+        # Initialize and run StuffDocumentsChain (Map step)
         summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
         summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
 
         # Convert summaries to a list of Document objects
         summaries = [Document(page_content=summary) for summary in summaries]
 
+        # Run StuffDocumentsChain again to consolidate the summaries (Reduce step)
         summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
         consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
         
