@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""test1011.ipynb"""
+
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.chains import StuffDocumentsChain
@@ -59,10 +62,13 @@ if st.button("Generate"):
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name='text')
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain)
 
         # Load and prepare the data
         documents = url_loader.load()
+
+        # Debugging print statement
+        print("Scraped Data:", documents)
 
         # Extract the page_content from each Document object
         texts = [doc.page_content for doc in documents]
