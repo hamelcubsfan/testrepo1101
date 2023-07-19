@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.chains.summarize import load_summarize_chain
@@ -9,15 +8,12 @@ from langchain.prompts import PromptTemplate
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
 
-api_key = st.text_input("Enter your OpenAI API Key", key='input_api_key')
-source_url = st.text_input("Enter the source URL (LinkedIn profile, tweets, or blog posts)", key='input_source_url')
+api_key = st.text_input("Enter your OpenAI API Key")
+source_url = st.text_input("Enter the source URL (LinkedIn profile, tweets, or blog posts)")
 
 if st.button("Generate"):
     if api_key and source_url:
-        # Initialize the OpenAI model
-        # NOTE: This assumes that `OpenAI` takes an API key as an argument. You might need to revise this
-        #       line according to the actual usage of the `OpenAI` class in the `langchain` library.
-        lang_model = OpenAI(api_key)
+        lang_model = OpenAI()
 
         # Initialize the necessary classes
         url_loader = UnstructuredURLLoader()
