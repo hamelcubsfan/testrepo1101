@@ -12,10 +12,10 @@ from markdownify import markdownify as md
 st.title("Personalized Outreach Generator")
 
 api_key = st.text_input("Enter your OpenAI API Key")
-source_url = st.text_input("Enter the source URL (website or blog post)")
+source_url = st.text_input("Enter the source URL (LinkedIn profile)")
 candidate_name = st.text_input("Enter the candidate's name")
 
-# Function to scrape data from a website
+# Function to scrape data from a LinkedIn profile
 def pull_from_website(url):
     try:
         response = requests.get(url)
@@ -33,9 +33,10 @@ def pull_from_website(url):
     text = md(text)  # Convert HTML to Markdown for better parsing
     return text
 
-map_prompt = """Below is a section of a website about {candidate}
+map_prompt = """You are a helpful AI bot that aids a user in summarizing information.
+Below is the content of a LinkedIn profile about {candidate}
 
-Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
+Analyze the LinkedIn profile and write a concise summary about {candidate}'s professional background, skills, and experiences. If the information is not about {candidate}, exclude it from your summary.
 
 {text}
 
@@ -43,7 +44,7 @@ Write a concise summary about {candidate}. If the information is not about {cand
 
 combine_prompt = """
 You are a helpful AI bot that aids a user in summarizing information.
-You will be given a list of summaries about {candidate}.
+You will be given a list of summaries about {candidate} derived from their LinkedIn profile.
 
 Please consolidate the summaries and return a unified, coherent summary
 
@@ -66,7 +67,8 @@ if st.button("Generate"):
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
         # Prepare the data
-        documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=25000, chunk_overlap=2000)
+        documents = text_splitter.create_documents([scraped_data])
 
         # Initialize and run StuffDocumentsChain (Map step)
         summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
