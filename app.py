@@ -18,11 +18,35 @@ Write a concise summary about {prospect}. If the information is not about {prosp
 
 {text}
 
-% CONCISE SUMMARY:
+% CONCISE SUMMARY:"""
 
-% TONE
-- Don't use any emojis or hashtags.
-- Respond in the tone of Bill Gates
+combine_prompt = """
+Your goal is to write a personalized outbound email from {sales_rep}, a sales rep at {company} to {prospect}.
+
+A good email is personalized and combines information about the two companies on how they can help each other.
+Be sure to use value selling: A sales methodology that focuses on how your product or service will provide value to the customer instead of focusing on price or solution.
+
+% INFORMATION ABOUT {company}:
+{company_information}
+
+% INFORMATION ABOUT {prospect}:
+{text}
+
+% INCLUDE THE FOLLOWING PIECES IN YOUR RESPONSE:
+- Start the email with the sentence: "We love that {prospect} helps teams..." then insert what they help teams do.
+- The sentence: "We can help you do XYZ by ABC" Replace XYZ with what {prospect} does and ABC with what {company} does 
+- A 1-2 sentence description about {company}, be brief
+- End your email with a call-to-action such as asking them to set up time to talk more
+
+% YOUR RESPONSE:
+"""
+
+company_information = """
+* RapidRoad helps product teams build product faster
+* We have a platform that allows product teams to talk more, exchange ideas, and listen to more customers
+* Automated project tracking: RapidRoad could use machine learning algorithms to automatically track project progress, identify potential bottlenecks, and suggest ways to optimize workflows. This could help product teams stay on track and deliver faster results.
+* Collaboration tools: RapidRoad could offer built-in collaboration tools, such as shared task lists, real-time messaging, and team calendars. This would make it easier for teams to communicate and work together, even if they are in different locations or time zones.
+* Agile methodology support: RapidRoad could be specifically designed to support agile development methodologies, such as Scrum or Kanban. This could include features like sprint planning, backlog management, and burndown charts, which would help teams stay organized and focused on their goals.
 """
 
 if st.button("Generate"):
@@ -32,8 +56,10 @@ if st.button("Generate"):
         url_loader = UnstructuredURLLoader(urls=[source_url])
         text_splitter = RecursiveCharacterTextSplitter()
         map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
+        combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain)
+        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name='text')
 
         # Load and prepare the data
         documents = url_loader.load()
@@ -45,7 +71,7 @@ if st.button("Generate"):
         documents = text_splitter.create_documents(texts)
 
         # Generate the personalized outreach email
-        email = summarize_chain.run({"input_documents": documents, "prospect": "Prospect Name"})
+        email = summarize_chain.run({"input_documents": documents, "company": "Your Company", "company_information": company_information, "sales_rep": "Your Name", "prospect": "Prospect Name"})
         
         st.write(email)
     else:
