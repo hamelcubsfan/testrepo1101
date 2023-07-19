@@ -7,6 +7,15 @@ from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
+import streamlit as st
+from langchain.chains import StuffDocumentsChain
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
+from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
+from langchain.prompts import PromptTemplate
+import requests
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
@@ -32,21 +41,13 @@ def pull_from_website(url):
     text = md(text)
     return text
 
-map_prompt = """You are a helpful AI bot that aids a user in research.
-Below is information about a person named {candidate}.
-Information will include tweets, interview transcripts, and blog posts about {candidate}
-Your goal is to generate interview questions that we can ask {candidate}
-Use specifics from the research when possible
+map_prompt = """Below is a section of a website about {candidate}
 
-% START OF INFORMATION ABOUT {candidate}:
+Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
+
 {text}
-% END OF INFORMATION ABOUT {candidate}:
 
-Please respond with list of a few interview questions based on the topics above
-
-YOUR RESPONSE:"""
-
-map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
+% CONCISE SUMMARY:"""
 
 combine_prompt = """
 You are a helpful AI bot that aids a user in research.
@@ -58,6 +59,7 @@ Please consolidate the questions and return a list
 {text}
 """
 
+map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
 combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "candidate"])
 
 if st.button("Generate"):
@@ -77,6 +79,9 @@ if st.button("Generate"):
         # Initialize and run StuffDocumentsChain
         summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
         questions = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+
+        # Convert questions to a list of Document objects
+        questions = [Document(page_content=question) for question in questions]
 
         summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
         consolidated_questions = summarize_chain.run({"input_documents": questions, "candidate": candidate_name})
