@@ -44,6 +44,7 @@ if st.button("Generate"):
     if api_key and source_url and candidate_name:
         # Scrape data from the website
         scraped_data = pull_from_website(source_url)
+        st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
         lang_model = OpenAI(openai_api_key=api_key)
