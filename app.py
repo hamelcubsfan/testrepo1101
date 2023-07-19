@@ -1,42 +1,27 @@
-import streamlit as st
-from langchain.chains import StuffDocumentsChain
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
 
-# Create Streamlit interface
-st.title("Personalized Outreach Generator")
-
-api_key = st.text_input("Enter your OpenAI API Key")
-source_url = st.text_input("Enter the source URL (LinkedIn profile)")
-candidate_name = st.text_input("Enter the candidate's name")
-
-# Function to scrape data from a LinkedIn profile
+# Function to scrape data from a website
 def pull_from_website(url):
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Check if the request was successful
     except:
-        st.write("Whoops, error")
+        print("Whoops, error")
         return
+
     soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Remove unnecessary tags
-    for tag in soup.find_all(['nav', 'footer', 'aside', 'header', 'style', 'script']):
-        tag.decompose()
-
     text = soup.get_text()
-    text = md(text)  # Convert HTML to Markdown for better parsing
+    text = md(text)
     return text
 
-map_prompt = """You are a helpful AI bot that aids a user in summarizing information.
-Below is the content of a LinkedIn profile about {candidate}
+map_prompt = """Below is a section of a website about {candidate}
 
-Analyze the LinkedIn profile and write a concise summary about {candidate}'s professional background, skills, and experiences. If the information is not about {candidate}, exclude it from your summary.
+Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
 
 {text}
 
@@ -44,7 +29,7 @@ Analyze the LinkedIn profile and write a concise summary about {candidate}'s pro
 
 combine_prompt = """
 You are a helpful AI bot that aids a user in summarizing information.
-You will be given a list of summaries about {candidate} derived from their LinkedIn profile.
+You will be given a list of summaries about {candidate}.
 
 Please consolidate the summaries and return a unified, coherent summary
 
@@ -55,32 +40,30 @@ Please consolidate the summaries and return a unified, coherent summary
 map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
 combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "candidate"])
 
-if st.button("Generate"):
-    if api_key and source_url and candidate_name:
-        # Scrape data from the website
-        scraped_data = pull_from_website(source_url)
-        st.write("Scraped Data:", scraped_data)
+api_key = YOUR_OPENAI_API_KEY
+source_url = YOUR_SOURCE_URL
+candidate_name = YOUR_CANDIDATE_NAME
 
-        # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
-        map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
-        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+# Scrape data from the website
+scraped_data = pull_from_website(source_url)
+print("Scraped Data:", scraped_data)
 
-        # Prepare the data
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=25000, chunk_overlap=2000)
-        documents = text_splitter.create_documents([scraped_data])
+# Initialize the necessary classes
+lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
-        # Initialize and run StuffDocumentsChain (Map step)
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-        summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+# Prepare the data
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
+documents = text_splitter.create_documents([scraped_data])
 
-        # Convert summaries to a list of Document objects
-        summaries = [Document(page_content=summary) for summary in summaries]
+# Run the map stage
+summaries = map_llm_chain.run({"input_documents": documents, "candidate": candidate_name})
 
-        # Run StuffDocumentsChain again to consolidate the summaries (Reduce step)
-        summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
-        consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
-        
-        st.write(consolidated_summary)
-    else:
-        st.write("Please provide all necessary information.")
+# Convert summaries to a list of Document objects
+summaries = [Document(page_content=summary) for summary in summaries]
+
+# Run the combine stage
+consolidated_summary = combine_llm_chain.run({"input_documents": summaries, "candidate": candidate_name})
+
+print(consolidated_summary)
