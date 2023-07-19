@@ -1,6 +1,8 @@
 streamlit==1.0.0
 langchain==0.0.235
 openai==0.27.0
+beautifulsoup4
+markdownify
 unstructured
 pandas
 chromadb
