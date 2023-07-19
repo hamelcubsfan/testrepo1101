@@ -2,15 +2,6 @@ import streamlit as st
 from langchain.chains import StuffDocumentsChain
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.prompts import PromptTemplate
-import requests
-from bs4 import BeautifulSoup
-from markdownify import markdownify as md
-import streamlit as st
-from langchain.chains import StuffDocumentsChain
-from langchain.llms import OpenAI
-from langchain.chains import LLMChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
 from langchain.prompts import PromptTemplate
 import requests
@@ -50,12 +41,12 @@ Write a concise summary about {candidate}. If the information is not about {cand
 % CONCISE SUMMARY:"""
 
 combine_prompt = """
-You are a helpful AI bot that aids a user in research.
-You will be given a list of potential interview questions that we can ask {candidate}.
+You are a helpful AI bot that aids a user in summarizing information.
+You will be given a list of summaries about {candidate}.
 
-Please consolidate the questions and return a list
+Please consolidate the summaries and return a unified, coherent summary
 
-% INTERVIEW QUESTIONS
+% SUMMARIES
 {text}
 """
 
@@ -78,14 +69,14 @@ if st.button("Generate"):
 
         # Initialize and run StuffDocumentsChain
         summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-        questions = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+        summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
 
-        # Convert questions to a list of Document objects
-        questions = [Document(page_content=question) for question in questions]
+        # Convert summaries to a list of Document objects
+        summaries = [Document(page_content=summary) for summary in summaries]
 
         summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
-        consolidated_questions = summarize_chain.run({"input_documents": questions, "candidate": candidate_name})
+        consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
         
-        st.write(consolidated_questions)
+        st.write(consolidated_summary)
     else:
         st.write("Please provide all necessary information.")
