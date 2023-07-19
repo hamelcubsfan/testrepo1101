@@ -15,9 +15,9 @@ api_key = st.text_input("Enter your OpenAI API Key")
 source_url = st.text_input("Enter the source URL (website or blog post)")
 
 # Function to scrape data from a website
-def pull_from_website(url):
+def pull_from_website(source_url):
     try:
-        response = requests.get(url)
+        response = requests.get(source_url)
     except:
         st.write("Whoops, error")
         return
