@@ -28,6 +28,7 @@ if st.button("Generate"):
 
         # Load and prepare the data
         documents = url_loader.load()
+        documents = [doc.page_content for doc in documents]  # Extract the text from the Document objects
         documents = text_splitter.create_documents(documents)
 
         # Generate the personalized outreach email
