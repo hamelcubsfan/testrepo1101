@@ -14,6 +14,7 @@ source_url = st.text_input("Enter the source URL (LinkedIn profile, tweets, or b
 if st.button("Generate"):
     if api_key and source_url:
         lang_model = OpenAI()
+        lang_model.api_key = api_key  # Set the API key after instantiation
 
         # Initialize the necessary classes
         url_loader = UnstructuredURLLoader()
