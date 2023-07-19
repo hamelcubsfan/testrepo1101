@@ -18,7 +18,12 @@ Write a concise summary about {prospect}. If the information is not about {prosp
 
 {text}
 
-% CONCISE SUMMARY:"""
+% CONCISE SUMMARY:
+
+% TONE
+- Don't use any emojis or hashtags.
+- Respond in the tone of Bill Gates
+"""
 
 combine_prompt = """
 Your goal is to write a personalized outbound email from {sales_rep}, a sales rep at {company} to {prospect}.
@@ -52,19 +57,14 @@ company_information = """
 if st.button("Generate"):
     if api_key and source_url:
         # Initialize the necessary classes
-        lang_model = OpenAI(temperature=0.5)
+        lang_model = OpenAI(openai_api_key=api_key)
         url_loader = UnstructuredURLLoader(urls=[source_url])
         text_splitter = RecursiveCharacterTextSplitter()
         map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
-        document_variable_name = "context" 
-        summarize_chain = StuffDocumentsChain(
-            llm_chain=map_llm_chain,  # or combine_llm_chain depending on your use case
-            document_prompt=map_prompt_template,
-            document_variable_name=document_variable_name
-        )
+        summarize_chain = StuffDocumentsChain(map_llm_chain=map_llm_chain, combine_llm_chain=combine_llm_chain)
 
         # Load and prepare the data
         documents = url_loader.load()
