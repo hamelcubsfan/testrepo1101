@@ -1,6 +1,6 @@
 import streamlit as st
 from langchain.chains import StuffDocumentsChain
-from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.chains import LLMChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
 from langchain.prompts import PromptTemplate
@@ -64,7 +64,7 @@ if st.button("Generate"):
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+        lang_model = ChatOpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
