@@ -2,34 +2,62 @@ import streamlit as st
 from langchain.chains import StuffDocumentsChain
 from langchain.llms import OpenAI
 from langchain.chains import LLMChain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
+import requests
+from bs4 import BeautifulSoup
+from markdownify import markdownify as md
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
 
 api_key = st.text_input("Enter your OpenAI API Key")
-about_section = st.text_input("Paste the 'About' section from the LinkedIn profile")
-experience_section = st.text_input("Paste the 'Experience' section from the LinkedIn profile")
+source_url = st.text_input("Enter the source URL (website or blog post)")
 candidate_name = st.text_input("Enter the candidate's name")
 
-map_prompt = """Below is some information about {candidate}
+# Function to scrape data from a website
+def pull_from_website(url):
+    try:
+        response = requests.get(url)
+    except:
+        st.write("Whoops, error")
+        return
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Remove unnecessary tags
+    for tag in soup.find_all(['nav', 'footer', 'aside', 'header', 'style', 'script']):
+        tag.decompose()
+
+    text = soup.get_text()
+    text = md(text)
+    return text
+
+map_prompt = """Below is a section of a website about {candidate}
+
+Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
 
 {about_section}
-
-{experience_section}
 
 % CONCISE SUMMARY:"""
 
 if st.button("Generate"):
-    if api_key and about_section and experience_section and candidate_name:
+    if api_key and source_url and candidate_name:
+        # Scrape data from the website
+        scraped_data = pull_from_website(source_url)
+        st.write("Scraped Data:", scraped_data)
+
         # Initialize the necessary classes
         lang_model = OpenAI(openai_api_key=api_key)
-        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["about_section", "experience_section", "candidate"])
+        text_splitter = RecursiveCharacterTextSplitter()
+        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["about_section", "candidate"])
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
 
-        # Run StuffDocumentsChain
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-        summary = summarize_chain.run({"input_documents": [about_section, experience_section], "candidate": candidate_name})
+        # Prepare the data
+        documents = text_splitter.create_documents([scraped_data])
+
+        # Initialize and run StuffDocumentsChain
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="about_section")
+        summary = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
         
         st.write(summary)
     else:
