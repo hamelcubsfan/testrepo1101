@@ -4,3 +4,4 @@ pandas
 chromadb
 tiktoken
 openai
+streamlit
