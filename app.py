@@ -2,7 +2,7 @@ import streamlit as st
 from langchain import load_summarize_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
-from langchain.prompts import PromptTemplate
+from langchain.schema import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
