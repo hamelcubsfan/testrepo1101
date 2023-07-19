@@ -25,7 +25,7 @@ if st.button("Generate"):
         lang_model = OpenAI(openai_api_key=api_key)
 
         # Initialize the necessary classes
-        url_loader = UnstructuredURLLoader([source_url])  # Updated this line
+        url_loader = UnstructuredURLLoader([source_url])
         text_splitter = RecursiveCharacterTextSplitter()
 
         # Define prompt templates
@@ -39,10 +39,10 @@ if st.button("Generate"):
         map_prompt_template = PromptTemplate(template=map_prompt, input_variables=map_input_variables)
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=combine_input_variables)
 
-        summarize_chain = load_summarize_chain()
+        summarize_chain = load_summarize_chain(llm=lang_model)  # Updated this line
 
         # Load and prepare the data
-        documents = url_loader.load()  # Updated this line
+        documents = url_loader.load()
         documents = text_splitter.split(documents)
 
         # Generate the personalized outreach email
