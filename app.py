@@ -32,7 +32,7 @@ if st.button("Generate"):
         documents = text_splitter.create_documents(documents)
 
         # Generate the personalized outreach email
-        email = summarize_chain.execute(documents, lang_model, map_prompt_template, combine_prompt_template)
+        email = summarize_chain.run(documents, lang_model, map_prompt_template, combine_prompt_template)
 
         st.write(email)
     else:
