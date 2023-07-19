@@ -7,9 +7,9 @@ Original file is located at
     https://colab.research.google.com/drive/1UuE6RxUDUO-cJK7mWH9nlz26ythCVZFc
 """
 
-!pip install langchain
-!pip install openai
-!pip install streamlit
+pip install langchain
+pip install openai
+pip install streamlit
 
 import streamlit as st
 from langchain.document_loaders import UnstructuredURLLoader
