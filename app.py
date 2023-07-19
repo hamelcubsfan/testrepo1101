@@ -32,7 +32,7 @@ def run_summarize_chain(chain, docs, persons_name):
 def main():
     st.title("LinkedIn Profile Summarizer")
     url = st.text_input("Enter LinkedIn profile URL")
-    openai_key = st.text_input("Enter OpenAI API Key")
+    OPENAI_API_KEY = st.text_input("Enter OpenAI API Key", type="password")  # Add this line
 
     if st.button("Summarize"):
         html = fetch_profile_html(url)
@@ -53,7 +53,7 @@ def main():
                             """
         combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "persons_name"])
 
-        llm = ChatOpenAI(temperature=.25, model_name='gpt-3.5-turbo-16k', api_key=openai_key)
+        llm = ChatOpenAI(temperature=.25, model_name='gpt-3.5-turbo-16k', api_key=OPENAI_API_KEY)
         chain = create_summarize_chain(llm, map_prompt_template, combine_prompt_template)
         summary = run_summarize_chain(chain, docs, "LinkedIn User")  # Replace "LinkedIn User" with actual name if available
 
