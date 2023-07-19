@@ -1,4 +1,5 @@
 import os
+import requests
 import streamlit as st
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
@@ -7,7 +8,6 @@ from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.summarize import load_summarize_chain
-from langchain.document_loaders import DocumentLoader, Document
 
 # Scrapping function
 def pull_from_website(url):
