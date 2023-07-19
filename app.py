@@ -18,6 +18,9 @@ def main():
     # Streamlit text input for OpenAI API key
     OPENAI_API_KEY = st.text_input("Please input your OpenAI API key:")
 
+    # Streamlit button to execute
+    execute_button = st.button("Execute")
+
     # Function to scrape a website
     def pull_from_website(url):
         try:
@@ -39,30 +42,31 @@ def main():
 
         return text
 
-    if linkedin_url:
-        st.write(f"Fetching data from {linkedin_url}")
-        fetched_data = pull_from_website(linkedin_url)
-        
-        if fetched_data is None:
-            st.write("Failed to fetch data from the website.")
-        else:
-            st.write("Fetched data successfully. Now splitting into documents.")
-            # Split the fetched data into documents
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
-            docs = text_splitter.create_documents([fetched_data])
-
-            if len(docs) == 0:
-                st.write("Failed to split the fetched data into documents.")
+    if execute_button:
+        if linkedin_url:
+            st.write(f"Fetching data from {linkedin_url}")
+            fetched_data = pull_from_website(linkedin_url)
+            
+            if fetched_data is None:
+                st.write("Failed to fetch data from the website.")
             else:
-                st.write("Data split into documents successfully. Now generating summary.")
-                # Generate the summary
-                llm = ChatOpenAI(temperature=.25, model_name='gpt-3.5-turbo-16k', api_key=OPENAI_API_KEY)
-                chain = load_summarize_chain(llm)
+                st.write("Fetched data successfully. Now splitting into documents.")
+                # Split the fetched data into documents
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=20000, chunk_overlap=2000)
+                docs = text_splitter.create_documents([fetched_data])
 
-                output = chain({"input_documents": docs})
+                if len(docs) == 0:
+                    st.write("Failed to split the fetched data into documents.")
+                else:
+                    st.write("Data split into documents successfully. Now generating summary.")
+                    # Generate the summary
+                    llm = ChatOpenAI(temperature=.25, model_name='gpt-3.5-turbo-16k', api_key=OPENAI_API_KEY)
+                    chain = load_summarize_chain(llm)
 
-                st.write("Generated summary successfully.")
-                st.write(output['output_text'])
+                    output = chain({"input_documents": docs})
+
+                    st.write("Generated summary successfully.")
+                    st.write(output['output_text'])
 
 if __name__ == "__main__":
     main()
