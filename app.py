@@ -8,7 +8,6 @@ from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
-from langchain.document_loaders import Document
 
 def main():
     st.title("LinkedIn Profile Summarizer")
