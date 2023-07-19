@@ -38,7 +38,7 @@ Write a concise summary about {candidate}. If the information is not about {cand
 
 {text}
 
-% CONCISE SUMMARY:"""
+% END OF SUMMARY:"""
 
 combine_prompt = """
 You are a helpful AI bot that aids a user in summarizing information.
@@ -46,7 +46,7 @@ You will be given a list of summaries about {candidate}.
 
 Please consolidate the summaries and return a unified, coherent summary
 
-% SUMMARIES
+% LIST OF SUMMARIES
 {text}
 """
 
