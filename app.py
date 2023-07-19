@@ -7,6 +7,7 @@ from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
+import re
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
@@ -30,6 +31,8 @@ def pull_from_website(url):
         tag.decompose()
 
     text = soup.get_text()
+    # Remove URLs
+    text = re.sub(r"http\S+|www\S+|https\S+", '', text, flags=re.MULTILINE)
     text = md(text)
     return text
 
