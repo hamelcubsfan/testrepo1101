@@ -1,28 +1,40 @@
-# -*- coding: utf-8 -*-
-"""test1011.ipynb"""
-
 import streamlit as st
-from langchain.document_loaders import UnstructuredURLLoader
-from langchain.chains import StuffDocumentsChain
-from langchain.llms import OpenAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain import OpenAI, RecursiveCharacterTextSplitter, UnstructuredURLLoader, Document
 from langchain.prompts import PromptTemplate
+from langchain.chains import StuffDocumentsChain
 
-# Create Streamlit interface
-st.title("Personalized Outreach Generator")
+# Ask the user for their OpenAI key and the LinkedIn URL
+openai_key = st.text_input("Please enter your OpenAI key:")
+linkedin_url = st.text_input("Please enter the LinkedIn URL you want to process:")
 
-api_key = st.text_input("Enter your OpenAI API Key")
-source_url = st.text_input("Enter the source URL (LinkedIn profile, tweets, or blog posts)")
+# Proceed with the rest of the code only if both inputs are provided
+if openai_key and linkedin_url:
+    # Initialize the language model with the provided key
+    lang_model = OpenAI(openai_api_key=openai_key)
 
-map_prompt = """Below is a section of a website about {prospect}
+    # Define URLs to load with the provided URL
+    urls = [linkedin_url]
+
+    # Load the contents of the URLs into documents
+    url_loader = UnstructuredURLLoader(urls=urls)
+    documents = url_loader.load()
+
+    # Define how the documents should be split
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=20, length_function=len)
+    documents = text_splitter.create_documents(documents)
+
+    # Define the map prompt
+    map_prompt = """Below is a section of a website about {prospect}
 
 Write a concise summary about {prospect}. If the information is not about {prospect}, exclude it from your summary.
 
 {text}
 
 % CONCISE SUMMARY:"""
+    map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
 
-combine_prompt = """
+    # Define the combine prompt
+    combine_prompt = """
 Your goal is to write a personalized outbound email from {sales_rep}, a sales rep at {company} to {prospect}.
 
 A good email is personalized and combines information about the two companies on how they can help each other.
@@ -42,37 +54,13 @@ Be sure to use value selling: A sales methodology that focuses on how your produ
 
 % YOUR RESPONSE:
 """
+    combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
 
-company_information = """
-* RapidRoad helps product teams build product faster
-* We have a platform that allows product teams to talk more, exchange ideas, and listen to more customers
-* Automated project tracking: RapidRoad could use machine learning algorithms to automatically track project progress, identify potential bottlenecks, and suggest ways to optimize workflows. This could help product teams stay on track and deliver faster results.
-* Collaboration tools: RapidRoad could offer built-in collaboration tools, such as shared task lists, real-time messaging, and team calendars. This would make it easier for teams to communicate and work together, even if they are in different locations or time zones.
-* Agile methodology support: RapidRoad could be specifically designed to support agile development methodologies, such as Scrum or Kanban. This could include features like sprint planning, backlog management, and burndown charts, which would help teams stay organized and focused on their goals.
-"""
+    # Create the chain to summarize the documents
+    summarize_chain = StuffDocumentsChain(llm=lang_model, map_prompt=map_prompt_template, combine_prompt=combine_prompt_template)
 
-if st.button("Generate"):
-    if api_key and source_url:
-        # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key)
-        url_loader = UnstructuredURLLoader(urls=[source_url])
-        text_splitter = RecursiveCharacterTextSplitter()
-        map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "prospect"])
-        combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["sales_rep", "company", "prospect", "text", "company_information"])
-        summarize_chain = StuffDocumentsChain(llm=lang_model, map_prompt=map_prompt_template, combine_prompt=combine_prompt_template)
+    # Run the chain on the documents
+    email = summarize_chain.run({"input_documents": documents})
 
-        # Load and prepare the data
-        documents = url_loader.load()
-
-        # Extract the page_content from each Document object
-        texts = [doc.page_content for doc in documents]
-
-        # Split the texts into chunks
-        documents = text_splitter.create_documents(texts)
-
-        # Generate the personalized outreach email
-        email = summarize_chain.run({"input_documents": documents, "company": "Your Company", "company_information": company_information, "sales_rep": "Your Name", "prospect": "Prospect Name"})
-        
-        st.write(email)
-    else:
-        st.write("Please provide both the API key and source URL.")
+    # Display the result
+    st.write(email)
