@@ -1,8 +1,6 @@
 import streamlit as st
-from langchain import DocumentLoader
 from langchain.load import load_chain
 from langchain.llms.openai import ChatOpenAI
-from langchain.llms.openai import OpenAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import requests
 from bs4 import BeautifulSoup
