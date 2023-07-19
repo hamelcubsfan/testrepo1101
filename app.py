@@ -12,9 +12,9 @@ st.title("Personalized Outreach Generator")
 api_key = st.text_input("Enter your OpenAI API Key")
 source_url = st.text_input("Enter the source URL (LinkedIn profile, tweets, or blog posts)")
 
-map_prompt = """Below is a section of a website about {prospect}
+map_prompt = """Below is a section of a LinkedIn profile about {prospect}
 
-Write a concise summary about {prospect}. If the information is not about {prospect}, exclude it from your summary.
+Write a concise summary about {prospect}'s career history and skills. If the information is not about {prospect}'s career or skills, exclude it from your summary.
 
 {text}
 
