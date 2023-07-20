@@ -1,8 +1,9 @@
 import streamlit as st
-from langchain import load_summarize_chain
-from langchain.chat_models import ChatOpenAI
+from langchain.chains import StuffDocumentsChain
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
 from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
-from langchain.schema import PromptTemplate
+from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 from markdownify import markdownify as md
@@ -60,19 +61,23 @@ if st.button("Generate"):
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
-        lang_model = ChatOpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo', temperature=.25)
+        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+        map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
         # Prepare the data
         documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
         # Initialize and run StuffDocumentsChain
-        summarize_chain = load_summarize_chain(lang_model,
-                                               chain_type="map_reduce",
-                                               map_prompt=map_prompt_template,
-                                               combine_prompt=combine_prompt_template)
-        
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
         summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
 
-        st.write(summaries)
+        # Convert summaries to a list of Document objects
+        summaries = [Document(page_content=summary) for summary in summaries]
+
+        summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+        consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
+        
+        st.write(consolidated_summary)
     else:
         st.write("Please provide all necessary information.")
