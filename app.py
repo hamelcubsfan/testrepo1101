@@ -7,6 +7,7 @@ from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 import html2text
+import nltk
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
@@ -36,6 +37,14 @@ def pull_from_website(url):
     text = h.handle(text)
 
     return text
+
+# Function to extract keywords from a text
+def extract_keywords(text):
+    keywords = nltk.word_tokenize(text)
+    keywords = [word for word in keywords if word.isalpha()]
+    keywords = nltk.FreqDist(keywords)
+    keywords = keywords.most_common(10)
+    return keywords
 
 map_prompt = """Below is a section of a website about {candidate}
 
@@ -67,6 +76,9 @@ if st.button("Generate"):
         else:
             st.write("Scraped Data:", scraped_data)
 
+            # Extract keywords from the scraped data
+            keywords = extract_keywords(scraped_data)
+
             # Initialize the necessary classes
             lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=0.1)
             map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
@@ -74,6 +86,7 @@ if st.button("Generate"):
 
             # Prepare the data
             documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
+            documents = [Document(page_content=document, keywords=keywords) for document in documents]
 
             # Initialize and run StuffDocumentsChain
             summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
@@ -83,8 +96,3 @@ if st.button("Generate"):
             summaries = [Document(page_content=summary) for summary in summaries]
 
             summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
-            consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
-
-            st.write(consolidated_summary)
-    else:
-        st.write("Please provide all necessary information.")
