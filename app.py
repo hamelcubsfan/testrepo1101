@@ -7,7 +7,6 @@ from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
 import html2text
-import nltk
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
@@ -21,30 +20,27 @@ candidate_name = st.text_input("Enter the candidate's name")
 def pull_from_website(url):
     try:
         response = requests.get(url)
-    except:
-        st.write("Whoops, error while fetching the URL")
+    except Exception as e:
+        st.write(f"Whoops, error: {e}")
         return None
-    soup = BeautifulSoup(response.text, 'html.parser')
+
+    if response.status_code != 200:
+        st.write(f"Failed to get content from {url}, status code: {response.status_code}")
+        return None
+
+    soup = BeautifulSoup(response.content, 'html.parser')
 
     # Remove unnecessary tags
     for tag in soup.find_all(['nav', 'footer', 'aside', 'header', 'style', 'script']):
         tag.decompose()
 
-    text = soup.get_text()
+    # Extract only the text within the <p> tags
+    text = ' '.join(p.get_text() for p in soup.find_all('p'))
 
-    # Convert HTML to Markdown
     h = html2text.HTML2Text()
     text = h.handle(text)
 
     return text
-
-# Function to extract keywords from a text
-def extract_keywords(text):
-    keywords = nltk.word_tokenize(text)
-    keywords = [word for word in keywords if word.isalpha()]
-    keywords = nltk.FreqDist(keywords)
-    keywords = keywords.most_common(10)
-    return keywords
 
 map_prompt = """Below is a section of a website about {candidate}
 
@@ -71,28 +67,26 @@ if st.button("Generate"):
     if api_key and source_url and candidate_name:
         # Scrape data from the website
         scraped_data = pull_from_website(source_url)
-        if scraped_data is None:
-            st.write("Please check the source URL and try again.")
-        else:
-            st.write("Scraped Data:", scraped_data)
+        st.write("Scraped Data:", scraped_data)
 
-            # Extract keywords from the scraped data
-            keywords = extract_keywords(scraped_data)
+        # Initialize the necessary classes
+        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+        map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
-            # Initialize the necessary classes
-            lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=0.1)
-            map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
-            combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+        # Prepare the data
+        documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
-            # Prepare the data
-            documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
-            documents = [Document(page_content=document, keywords=keywords) for document in documents]
+        # Initialize and run StuffDocumentsChain
+        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
+        summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
 
-            # Initialize and run StuffDocumentsChain
-            summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-            summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+        # Convert summaries to a list of Document objects
+        summaries = [Document(page_content=summary) for summary in summaries]
 
-            # Convert summaries to a list of Document objects
-            summaries = [Document(page_content=summary) for summary in summaries]
+        summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+        consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
 
-            summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+        st.write(consolidated_summary)
+    else:
+        st.write("Please provide all necessary information.")
