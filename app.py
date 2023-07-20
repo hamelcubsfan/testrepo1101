@@ -21,8 +21,8 @@ def pull_from_website(url):
     try:
         response = requests.get(url)
     except:
-        st.write("Whoops, error")
-        return
+        st.write("Whoops, error while fetching the URL")
+        return None
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Remove unnecessary tags
@@ -62,6 +62,9 @@ if st.button("Generate"):
     if api_key and source_url and candidate_name:
         # Scrape data from the website
         scraped_data = pull_from_website(source_url)
+        if scraped_data is None:
+            st.write("Please check the source URL and try again.")
+            return
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
