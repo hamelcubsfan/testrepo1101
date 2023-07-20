@@ -21,7 +21,7 @@ def pull_from_website(url):
     try:
         response = requests.get(url)
     except:
-        st.write("Whoops, error while fetching the URL")
+        st.error("There was an error in accessing the URL.")
         return None
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -37,54 +37,62 @@ def pull_from_website(url):
 
     return text
 
-map_prompt = """Below is a section of a website about {candidate}
+map_prompt = """We have a section of a website that contains some information about {candidate}. 
+We need you to write a concise summary about the {candidate}-related content only. 
+If you find information that is not about {candidate}, please exclude it from your summary.
 
-Write a concise summary about {candidate}. If the information is not about {candidate}, exclude it from your summary.
+Here is the section:
 
 {text}
 
-% CONCISE SUMMARY:"""
+Now, please provide a concise summary about {candidate} based on the above section."""
 
 combine_prompt = """
-You are a helpful AI bot that aids a user in summarizing information.
-You will be given a list of summaries about {candidate}.
+Now, you have a list of summaries about {candidate}. Your task is to consolidate these summaries and create a unified, coherent summary about {candidate}. 
 
-Please consolidate the summaries and return a unified, coherent summary
+Here are the summaries:
 
-% SUMMARIES
 {text}
-"""
+
+Now, please provide a consolidated summary about {candidate}."""
 
 map_prompt_template = PromptTemplate(template=map_prompt, input_variables=["text", "candidate"])
 combine_prompt_template = PromptTemplate(template=combine_prompt, input_variables=["text", "candidate"])
 
 if st.button("Generate"):
-    if api_key and source_url and candidate_name:
-        # Scrape data from the website
-        scraped_data = pull_from_website(source_url)
-        if scraped_data is None:
-            st.write("Please check the source URL and try again.")
-        else:
-            st.write("Scraped Data:", scraped_data)
+    if not api_key or not source_url or not candidate_name:
+        st.error("Please provide all necessary information.")
+        return
 
-            # Initialize the necessary classes
-            lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
-            map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
-            combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+    # Scrape data from the website
+    scraped_data = pull_from_website(source_url)
+    
+    if scraped_data is None:
+        st.error("There was an error in scraping the webpage. Please check the URL and try again.")
+        return
 
-            # Prepare the data
-            documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
+    if candidate_name not in scraped_data:
+        st.error("The scraped webpage does not seem to contain information about the candidate.")
+        return
 
-            # Initialize and run StuffDocumentsChain
-            summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-            summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+    st.write("Scraped Data:", scraped_data)
 
-            # Convert summaries to a list of Document objects
-            summaries = [Document(page_content=summary) for summary in summaries]
+    # Initialize the necessary classes
+    lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
+    map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+    combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
-            summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
-            consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
+    # Prepare the data
+    documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
-            st.write(consolidated_summary)
-    else:
-        st.write("Please provide all necessary information.")
+    # Initialize and run StuffDocumentsChain
+    summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
+    summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+
+    # Convert summaries to a list of Document objects
+    summaries = [Document(page_content=summary) for summary in summaries]
+
+    summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+    consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
+
+    st.write(consolidated_summary)
