@@ -6,7 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, Document
 from langchain.prompts import PromptTemplate
 import requests
 from bs4 import BeautifulSoup
-from markdownify import markdownify as md
+import html2text
 
 # Create Streamlit interface
 st.title("Personalized Outreach Generator")
@@ -30,7 +30,11 @@ def pull_from_website(url):
         tag.decompose()
 
     text = soup.get_text()
-    text = md(text)
+
+    # Convert HTML to Markdown
+    h = html2text.HTML2Text()
+    text = h.handle(text)
+
     return text
 
 map_prompt = """Below is a section of a website about {candidate}
@@ -61,7 +65,7 @@ if st.button("Generate"):
         st.write("Scraped Data:", scraped_data)
 
         # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.75)
+        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
         map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
         combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
@@ -77,7 +81,7 @@ if st.button("Generate"):
 
         summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
         consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
-        
+
         st.write(consolidated_summary)
     else:
         st.write("Please provide all necessary information.")
