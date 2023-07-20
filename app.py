@@ -20,8 +20,8 @@ candidate_name = st.text_input("Enter the candidate's name")
 def pull_from_website(url):
     try:
         response = requests.get(url)
-    except requests.exceptions.RequestException as err:
-        st.write("Whoops, there was an error:", err)
+    except:
+        st.write("Whoops, error while fetching the URL")
         return None
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -63,28 +63,28 @@ if st.button("Generate"):
         # Scrape data from the website
         scraped_data = pull_from_website(source_url)
         if scraped_data is None:
-            st.write("Could not scrape data from the website. Please check the URL.")
-            return
-        st.write("Scraped Data:", scraped_data)
+            st.write("Please check the source URL and try again.")
+        else:
+            st.write("Scraped Data:", scraped_data)
 
-        # Initialize the necessary classes
-        lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=.25)
-        map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
-        combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
+            # Initialize the necessary classes
+            lang_model = OpenAI(openai_api_key=api_key, model_name='gpt-3.5-turbo-16k', temperature=0.1)
+            map_llm_chain = LLMChain(llm=lang_model, prompt=map_prompt_template)
+            combine_llm_chain = LLMChain(llm=lang_model, prompt=combine_prompt_template)
 
-        # Prepare the data
-        documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
+            # Prepare the data
+            documents = RecursiveCharacterTextSplitter().create_documents([scraped_data])
 
-        # Initialize and run StuffDocumentsChain
-        summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
-        summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
+            # Initialize and run StuffDocumentsChain
+            summarize_chain = StuffDocumentsChain(llm_chain=map_llm_chain, document_variable_name="text")
+            summaries = summarize_chain.run({"input_documents": documents, "candidate": candidate_name})
 
-        # Convert summaries to a list of Document objects
-        summaries = [Document(page_content=summary) for summary in summaries]
+            # Convert summaries to a list of Document objects
+            summaries = [Document(page_content=summary) for summary in summaries]
 
-        summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
-        consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
+            summarize_chain = StuffDocumentsChain(llm_chain=combine_llm_chain, document_variable_name="text")
+            consolidated_summary = summarize_chain.run({"input_documents": summaries, "candidate": candidate_name})
 
-        st.write(consolidated_summary)
+            st.write(consolidated_summary)
     else:
         st.write("Please provide all necessary information.")
